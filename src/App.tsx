@@ -25,8 +25,15 @@ export default function App() {
   const [morpheusCommands, setMorpheusCommands] = useState<MorpheusCommand[]>([]);
   const [morpheusState, setMorpheusState] = useState<MorpheusState>('Listening');
 
+  // Real data from backend
+  const [vpsHealthData, setVpsHealthData] = useState<any>(null);
+  const [sessionsData, setSessionsData] = useState<any>(null);
+  const [cronJobs, setCronJobs] = useState<any[]>([]);
+  const [kanbanTasks, setKanbanTasks] = useState<any[]>([]);
+  const [gatewayData, setGatewayData] = useState<any>(null);
+
   // Diagnostic states
-  const [activeTarget, setActiveTarget] = useState('staging.target-banking-demo.com:4443');
+  const [activeTarget, setActiveTarget] = useState('cybersamurai.co.uk');
   const [pipelineState, setPipelineState] = useState<'running' | 'paused' | 'stopped'>('running');
   const [currentTime, setCurrentTime] = useState('00:00:00 UTC');
   const [isLoading, setIsLoading] = useState(true);
@@ -51,7 +58,7 @@ export default function App() {
       setIsError(false);
     }
     try {
-      const [rAgents, rTasks, rLogs, rCves, rPipeline, rHistory] = await Promise.all([
+      const [rAgents, rTasks, rLogs, rCves, rPipeline, rHistory, rVps, rSessions, rCron, rKanban, rGateway] = await Promise.all([
         fetch(`${API_BASE_URL}/api/agents/status`).then(res => {
           if (!res.ok) throw new Error('Agents route failed');
           return res.json();
@@ -75,7 +82,12 @@ export default function App() {
         fetch(`${API_BASE_URL}/api/command/history`).then(res => {
           if (!res.ok) throw new Error('Command history route failed');
           return res.json();
-        })
+        }),
+        fetch(`${API_BASE_URL}/api/data/vps-health`).then(res => res.json()).catch(() => null),
+        fetch(`${API_BASE_URL}/api/data/sessions`).then(res => res.json()).catch(() => null),
+        fetch(`${API_BASE_URL}/api/data/cron-jobs`).then(res => res.json()).catch(() => null),
+        fetch(`${API_BASE_URL}/api/data/kanban`).then(res => res.json()).catch(() => null),
+        fetch(`${API_BASE_URL}/api/data/gateway`).then(res => res.json()).catch(() => null),
       ]);
 
       setAgents(rAgents);
@@ -86,6 +98,13 @@ export default function App() {
       setPipelineState(rPipeline.state);
       setActiveTarget(rPipeline.activeTarget);
       setMorpheusCommands(rHistory);
+
+      // Set real data
+      if (rVps) setVpsHealthData(rVps);
+      if (rSessions) setSessionsData(rSessions);
+      if (rCron?.jobs) setCronJobs(rCron.jobs);
+      if (rKanban?.tasks) setKanbanTasks(rKanban.tasks);
+      if (rGateway) setGatewayData(rGateway);
 
       // Compute Morpheus Cognitive state based on running conditions
       if (rPipeline.state === 'paused') {
@@ -260,7 +279,7 @@ export default function App() {
     }
   };
 
-  // Local metric adjustments (Metrics ticks are broadcasted automatically from server, so this is left quiet)
+  // Local metric adjustments (Metrics ticks are broadcasted automatically from server)
   const handleModifyAgentStats = () => {};
 
   // POST /api/tasks -> injects new assignment
@@ -521,8 +540,11 @@ export default function App() {
         {/* RIGHT SECTION: Status Pill & Clock */}
         <div className="flex items-center gap-4">
           <div className="hidden md:flex items-center gap-2 bg-[#090b0f] border border-slate-805/40 px-3.5 py-1.5 rounded-full text-xs font-mono select-none">
-            <span className="w-2 h-2 rounded-full bg-[#10b981] shadow-[0_0_5px_rgba(16,185,129,0.7)] animate-ping-slow" />
-            <span className="text-slate-400 uppercase font-semibold text-[10px] tracking-wider">All systems operational</span>
+            <span className={`w-2 h-2 rounded-full ${gatewayData?.state === 'running' ? 'bg-[#10b981] shadow-[0_0_5px_rgba(16,185,129,0.7)] animate-ping-slow' : 'bg-amber-500 animate-pulse'}`} />
+            <span className="text-slate-400 uppercase font-semibold text-[10px] tracking-wider">
+              {gatewayData?.state === 'running' ? 'All systems operational' : gatewayData?.state || 'Connecting...'}
+              {gatewayData?.active_agents != null ? ` • ${gatewayData.active_agents} agents` : ''}
+            </span>
           </div>
           
           <div className="flex items-center gap-2 text-[#e2e8f0] font-mono text-xs font-semibold bg-[#111319] px-4 py-2 rounded-lg border border-slate-800">
@@ -624,6 +646,10 @@ export default function App() {
                 {activeTab === 'servers' && (
                   <SystemHealth
                     agents={agents}
+                    vpsHealth={vpsHealthData}
+                    sessions={sessionsData}
+                    cronJobs={cronJobs}
+                    kanbanTasks={kanbanTasks}
                     onUpdateAgentStatus={handleUpdateAgentStatus}
                     onModifyAgentStats={handleModifyAgentStats}
                   />
@@ -692,9 +718,11 @@ export default function App() {
             <span>HERMES REDTEAM SYSTEM ORCHESTRATOR DIAGNOSTIC CONTEXT CONSOLE [PRODUCTION LEVEL]</span>
           </div>
           <div className="flex items-center gap-4">
-            <span>TARGET HOST: http://{activeTarget}</span>
-            <span>CYCLE RATE: 60Hz</span>
-            <span>DATA ENCRYPTION: SHA256/ECDSA-P384 ACTIVE</span>
+            <span>TARGET: {activeTarget}</span>
+            <span>GATEWAY: {gatewayData?.state || 'unknown'}</span>
+            {vpsHealthData?.cpu_percent != null && <span>CPU: {vpsHealthData.cpu_percent}%</span>}
+            {vpsHealthData?.ram?.percent != null && <span>RAM: {vpsHealthData.ram.percent}%</span>}
+            {sessionsData?.session_count != null && <span>SESSIONS: {sessionsData.session_count}</span>}
           </div>
         </div>
       </footer>

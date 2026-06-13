@@ -109,7 +109,13 @@ export default function CveQueue({ cves, onSendToBreach, tasks }: CveQueueProps)
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-900">
-              {cves.map(cve => {
+              {cves.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-slate-500">
+                    No CVEs found in recent agent logs. CVEs will appear here when the Researcher agent discovers them during reconnaissance.
+                  </td>
+                </tr>
+              ) : cves.map(cve => {
                 const alreadyCombating = isAlreadyInCombat(cve.cveId);
                 const isSentThisTurn = sentCveId === cve.id;
 

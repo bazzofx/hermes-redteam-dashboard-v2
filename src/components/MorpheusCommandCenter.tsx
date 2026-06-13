@@ -127,6 +127,11 @@ export default function MorpheusCommandCenter({
               COPS Red-Team Sandbox Pipeline active. Type "/status" or click recommendations.
             </div>
 
+            {commands.length === 0 && (
+              <div className="text-slate-500 text-xs py-8 text-center">
+                No command history yet. Send a command below to get started.
+              </div>
+            )}
             {commands.map((cmd) => {
               const cmdDate = cmd.timestamp.includes('T') ? new Date(cmd.timestamp) : new Date();
               const formattedTime = cmdDate.toLocaleTimeString();

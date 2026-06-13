@@ -18,3 +18,12 @@ View your app in AI Studio: https://ai.studio/apps/b529c35d-16b7-4ee1-84cf-79d83
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+
+>Note
+ ┊  Server is up and the summary endpoint returns real data. The dashboard is live at http://<your-ip>:3000.                                                    
+                                                                                                                                                                
+    Note: The AI Studio environment periodically kills background processes (SIGTERM). If the server goes down, restart it with:                                
+                                                                                                                                                                
+      ─ bash                                                                                                                                                    
+      cd ~/Brain/Project/hermes-redteam-dashboard-v2 && npx tsx server.ts  

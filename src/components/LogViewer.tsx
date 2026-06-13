@@ -43,8 +43,8 @@ export default function LogViewer({ logs, currentLocalTime }: LogViewerProps) {
     }
   };
 
-  // Parse current timestamp for relative filters (Simulated based on 2026-06-13T05:09:41-07:00)
-  const baseTimeObj = new Date('2026-06-13T05:09:41-07:00');
+  // Parse current timestamp for relative filters — use real current time
+  const baseTimeObj = new Date();
 
   // Filter logic
   const filteredLogs = logs.filter(log => {

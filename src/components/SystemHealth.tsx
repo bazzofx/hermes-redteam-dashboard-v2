@@ -1,15 +1,23 @@
 import React, { useState } from 'react';
 import { Agent } from '../types';
-import { Cpu, HardDrive, ShieldCheck, ShieldAlert, Heart, Zap, RefreshCw, Layers } from 'lucide-react';
+import { Cpu, HardDrive, ShieldCheck, ShieldAlert, Heart, Zap, RefreshCw, Layers, Server, Clock, Terminal, Activity } from 'lucide-react';
 
 interface SystemHealthProps {
   agents: Agent[];
+  vpsHealth: any;
+  sessions: any;
+  cronJobs: any[];
+  kanbanTasks: any[];
   onUpdateAgentStatus: (agentId: string, newStatus: 'Online' | 'Offline' | 'Busy') => void;
   onModifyAgentStats: (agentId: string, stats: { cpu: number; memory: number }) => void;
 }
 
 export default function SystemHealth({
   agents,
+  vpsHealth,
+  sessions,
+  cronJobs,
+  kanbanTasks,
   onUpdateAgentStatus,
   onModifyAgentStats
 }: SystemHealthProps) {
@@ -40,12 +48,11 @@ export default function SystemHealth({
     setSelectedAgent(null);
     onUpdateAgentStatus(agent.id, 'Offline');
     
-    // Simulate a reboot sequence
     setTimeout(() => {
-      onModifyAgentStats(agent.id, { cpu: 95, memory: 80 }); // Temporary busy spike
+      onModifyAgentStats(agent.id, { cpu: 95, memory: 80 });
       onUpdateAgentStatus(agent.id, 'Busy');
       setTimeout(() => {
-        onModifyAgentStats(agent.id, { cpu: 15, memory: 35 }); // Settles down
+        onModifyAgentStats(agent.id, { cpu: 15, memory: 35 });
         onUpdateAgentStatus(agent.id, 'Online');
         setIsDiagnosticRunning(null);
       }, 1500);
@@ -95,6 +102,155 @@ export default function SystemHealth({
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]" />
             <span className="text-slate-400">OFFLINE: {offlineCount}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* REAL VPS HEALTH METRICS */}
+      {vpsHealth && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* CPU */}
+          <div className="bg-[#090b0f] border border-slate-800 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Cpu className="w-4 h-4 text-cyan-400" />
+              <h4 className="text-xs font-mono font-bold uppercase text-slate-400">VPS CPU</h4>
+            </div>
+            <div className="text-3xl font-mono font-bold text-white">{vpsHealth.cpu_percent ?? '--'}%</div>
+            <div className="mt-2 h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  (vpsHealth.cpu_percent ?? 0) > 75 ? 'bg-red-500' : (vpsHealth.cpu_percent ?? 0) > 40 ? 'bg-amber-400' : 'bg-cyan-400'
+                }`}
+                style={{ width: `${vpsHealth.cpu_percent ?? 0}%` }}
+              />
+            </div>
+          </div>
+
+          {/* RAM */}
+          <div className="bg-[#090b0f] border border-slate-800 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <HardDrive className="w-4 h-4 text-fuchsia-400" />
+              <h4 className="text-xs font-mono font-bold uppercase text-slate-400">VPS RAM</h4>
+            </div>
+            {vpsHealth.ram ? (
+              <>
+                <div className="text-3xl font-mono font-bold text-white">{vpsHealth.ram.percent}%</div>
+                <div className="text-[10px] font-mono text-slate-500 mt-1">
+                  {vpsHealth.ram.used_mb}MB / {vpsHealth.ram.total_mb}MB ({vpsHealth.ram.available_mb}MB free)
+                </div>
+                <div className="mt-2 h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      vpsHealth.ram.percent > 80 ? 'bg-red-500' : vpsHealth.ram.percent > 50 ? 'bg-amber-400' : 'bg-fuchsia-400'
+                    }`}
+                    style={{ width: `${vpsHealth.ram.percent}%` }}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="text-lg font-mono text-slate-500">No data</div>
+            )}
+          </div>
+
+          {/* DISK */}
+          <div className="bg-[#090b0f] border border-slate-800 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Server className="w-4 h-4 text-amber-400" />
+              <h4 className="text-xs font-mono font-bold uppercase text-slate-400">VPS DISK</h4>
+            </div>
+            {vpsHealth.disk ? (
+              <>
+                <div className="text-3xl font-mono font-bold text-white">{vpsHealth.disk.percent}%</div>
+                <div className="text-[10px] font-mono text-slate-500 mt-1">
+                  {vpsHealth.disk.used_gb}GB / {vpsHealth.disk.total_gb}GB ({vpsHealth.disk.available_gb}GB free)
+                </div>
+                <div className="mt-2 h-1.5 w-full bg-slate-900 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      vpsHealth.disk.percent > 85 ? 'bg-red-500' : vpsHealth.disk.percent > 60 ? 'bg-amber-400' : 'bg-cyan-400'
+                    }`}
+                    style={{ width: `${vpsHealth.disk.percent}%` }}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="text-lg font-mono text-slate-500">No data</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* SESSIONS & CRON & KANBAN SUMMARY */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Sessions */}
+        <div className="bg-[#090b0f] border border-slate-800 rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Activity className="w-4 h-4 text-cyan-400" />
+            <h4 className="text-xs font-mono font-bold uppercase text-slate-400">Sessions</h4>
+          </div>
+          {sessions ? (
+            <div className="space-y-2 font-mono text-xs">
+              <div className="flex justify-between text-slate-400">
+                <span>Total sessions</span>
+                <span className="text-white font-bold">{sessions.session_count}</span>
+              </div>
+              <div className="flex justify-between text-slate-400">
+                <span>Total messages</span>
+                <span className="text-white font-bold">{sessions.message_count}</span>
+              </div>
+              <div className="flex justify-between text-slate-400">
+                <span>Input tokens</span>
+                <span className="text-cyan-400 font-bold">{sessions.tokens?.input?.toLocaleString() ?? 0}</span>
+              </div>
+              <div className="flex justify-between text-slate-400">
+                <span>Output tokens</span>
+                <span className="text-amber-400 font-bold">{sessions.tokens?.output?.toLocaleString() ?? 0}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm font-mono text-slate-500">Loading...</div>
+          )}
+        </div>
+
+        {/* Cron Jobs */}
+        <div className="bg-[#090b0f] border border-slate-800 rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Clock className="w-4 h-4 text-amber-400" />
+            <h4 className="text-xs font-mono font-bold uppercase text-slate-400">Cron Jobs ({cronJobs.length})</h4>
+          </div>
+          <div className="space-y-1.5 max-h-[120px] overflow-y-auto">
+            {cronJobs.length === 0 ? (
+              <div className="text-xs font-mono text-slate-500">No cron jobs found</div>
+            ) : (
+              cronJobs.slice(0, 5).map((job, i) => (
+                <div key={i} className="text-[10px] font-mono">
+                  <span className="text-cyan-400">{job.schedule}</span>
+                  <span className="text-slate-500 ml-1 truncate block">{job.command?.slice(0, 60)}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Kanban */}
+        <div className="bg-[#090b0f] border border-slate-800 rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Layers className="w-4 h-4 text-teal-400" />
+            <h4 className="text-xs font-mono font-bold uppercase text-slate-400">Kanban ({kanbanTasks.length})</h4>
+          </div>
+          <div className="space-y-1.5 max-h-[120px] overflow-y-auto">
+            {kanbanTasks.length === 0 ? (
+              <div className="text-xs font-mono text-slate-500">No kanban tasks</div>
+            ) : (
+              kanbanTasks.slice(0, 5).map((task, i) => (
+                <div key={i} className="text-[10px] font-mono flex items-center gap-2">
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    task.status === 'done' ? 'bg-cyan-400' : task.status === 'in_progress' ? 'bg-amber-400' : 'bg-slate-600'
+                  }`} />
+                  <span className="text-slate-300 truncate">{task.title?.slice(0, 50)}</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -169,7 +325,7 @@ export default function SystemHealth({
                         agent.cpu > 75 
                           ? 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]' 
                           : agent.cpu > 40 
-                            ? 'bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.5)]' 
+                            ? 'bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.5)]'
                             : 'bg-cyan-400 shadow-[0_0_6px_rgba(6,182,212,0.5)]'
                       }`}
                       style={{ width: `${agent.cpu}%` }}
@@ -193,7 +349,7 @@ export default function SystemHealth({
                         agent.memory > 80 
                           ? 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]' 
                           : agent.memory > 50 
-                            ? 'bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.5)]' 
+                            ? 'bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.5)]'
                             : 'bg-fuchsia-400 shadow-[0_0_6px_rgba(217,70,239,0.5)]'
                       }`}
                       style={{ width: `${agent.memory}%` }}
@@ -244,6 +400,9 @@ export default function SystemHealth({
                 <span>VIRTUAL CHASSES ID: <span className="text-cyan-400">0x{selectedAgent.id.charCodeAt(6).toString(16).toUpperCase()}..</span></span>
                 <span>STATUS CODE: <span className="text-slate-300 uppercase">{selectedAgent.status}</span></span>
                 <span>UPTIME VALUE: <span className="text-slate-300">{selectedAgent.uptime}</span></span>
+                {selectedAgent.model && <span>MODEL: <span className="text-amber-400">{selectedAgent.model}</span></span>}
+                {selectedAgent.totalLogs != null && <span>LOGS: <span className="text-cyan-400">{selectedAgent.totalLogs}</span> (<span className="text-teal-400">{selectedAgent.completed}C</span>/<span className="text-red-400">{selectedAgent.failed}F</span>)</span>}
+                {selectedAgent.lastTask && <span className="block w-full mt-1 text-slate-400 italic truncate">LAST: {selectedAgent.lastTask}</span>}
               </div>
             </div>
 
