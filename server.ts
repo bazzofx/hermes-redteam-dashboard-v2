@@ -869,7 +869,7 @@ if (fs.existsSync(distPath)) {
 }
 
 // ─── START ───────────────────────────────────────────────────────────────────
-const PORT = 3000;
+const PORT = 9999;
 initBoardDB();
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`[Hermes RedTeam Dashboard v2] Running on http://0.0.0.0:${PORT}`);
