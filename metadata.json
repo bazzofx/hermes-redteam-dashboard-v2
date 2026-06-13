@@ -1,0 +1,6 @@
+{
+  "name": "Red-Team Mission Control",
+  "description": "Interactive cyber-security dashboard for 6-agent red-team operations and Morpheus orchestration tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
